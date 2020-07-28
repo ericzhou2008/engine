@@ -1,5 +1,6 @@
 Flutter Engine
 ==============
+
 [![Build Status - Cirrus][]][Build status]
 
 Flutter is Google's mobile app SDK for crafting high-quality native interfaces
@@ -13,6 +14,10 @@ accessibility support, plugin architecture, and a Dart runtime and compile
 toolchain. Most developers will interact with Flutter via the [Flutter
 Framework](https://github.com/flutter/flutter), which provides a modern,
 reactive framework, and a rich set of platform, layout and foundation widgets.
+
+If you want to run/contribute to Flutter Web engine, more tooling can be 
+found at [felt](https://github.com/flutter/engine/tree/master/lib/web_ui/dev#whats-felt).
+This is a tool written to make web engine development experience easy.
 
 If you are new to Flutter, then you will find more general information
 on the Flutter project, including tutorials and samples, on our Web

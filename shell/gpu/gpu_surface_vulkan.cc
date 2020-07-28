@@ -1,6 +1,7 @@
 // Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+// FLUTTER_NOLINT
 
 #include "flutter/shell/gpu/gpu_surface_vulkan.h"
 #include "flutter/fml/logging.h"
@@ -42,9 +43,9 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceVulkan::AcquireFrame(
   SurfaceFrame::SubmitCallback callback =
       [weak_this = weak_factory_.GetWeakPtr()](const SurfaceFrame&,
                                                SkCanvas* canvas) -> bool {
-    // Frames are only ever acquired on the GPU thread. This is also the thread
-    // on which the weak pointer factory is collected (as this instance is owned
-    // by the rasterizer). So this use of weak pointers is safe.
+    // Frames are only ever acquired on the raster thread. This is also the
+    // thread on which the weak pointer factory is collected (as this instance
+    // is owned by the rasterizer). So this use of weak pointers is safe.
     if (canvas == nullptr || !weak_this) {
       return false;
     }

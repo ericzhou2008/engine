@@ -5,11 +5,13 @@
 #ifndef FLUTTER_FLOW_SCENE_UPDATE_CONTEXT_H_
 #define FLUTTER_FLOW_SCENE_UPDATE_CONTEXT_H_
 
+#include <cfloat>
 #include <memory>
 #include <set>
 #include <vector>
 
 #include "flutter/flow/compositor_context.h"
+#include "flutter/flow/embedded_views.h"
 #include "flutter/flow/raster_cache_key.h"
 #include "flutter/fml/compiler_specific.h"
 #include "flutter/fml/logging.h"
@@ -22,7 +24,16 @@ namespace flutter {
 
 class Layer;
 
-class SceneUpdateContext {
+// Scenic currently lacks an API to enable rendering of alpha channel; this only
+// happens if there is a OpacityNode higher in the tree with opacity != 1. For
+// now, clamp to a infinitesimally smaller value than 1, which does not cause
+// visual problems in practice.
+constexpr float kOneMinusEpsilon = 1 - FLT_EPSILON;
+
+// How much layers are separated in Scenic z elevation.
+constexpr float kScenicZElevationBetweenLayers = 10.f;
+
+class SceneUpdateContext : public flutter::ExternalViewEmbedder {
  public:
   class SurfaceProducerSurface {
    public:
@@ -59,7 +70,7 @@ class SceneUpdateContext {
     // Query a retained entity node (owned by a retained surface) for retained
     // rendering.
     virtual bool HasRetainedNode(const LayerRasterCacheKey& key) const = 0;
-    virtual const scenic::EntityNode& GetRetainedNode(
+    virtual scenic::EntityNode* GetRetainedNode(
         const LayerRasterCacheKey& key) = 0;
 
     virtual void SubmitSurface(
@@ -105,8 +116,8 @@ class SceneUpdateContext {
           const SkRRect& rrect,
           SkColor color,
           SkAlpha opacity,
-          float local_elevation = 0.0f,
-          float parent_elevation = 0.0f,
+          std::string label,
+          float z_translation = 0.0f,
           Layer* layer = nullptr);
     virtual ~Frame();
 
@@ -162,9 +173,8 @@ class SceneUpdateContext {
   // CPU wait. Once Vulkan semaphores are available, this method must return
   // void and the implementation must submit surfaces on its own as soon as the
   // specific canvas operations are done.
-  FML_WARN_UNUSED_RESULT
-  std::vector<std::unique_ptr<SurfaceProducerSurface>> ExecutePaintTasks(
-      CompositorContext::ScopedFrame& frame);
+  [[nodiscard]] std::vector<std::unique_ptr<SurfaceProducerSurface>>
+  ExecutePaintTasks(CompositorContext::ScopedFrame& frame);
 
   float ScaleX() const { return metrics_->scale_x * top_scale_x_; }
   float ScaleY() const { return metrics_->scale_y * top_scale_y_; }
@@ -176,9 +186,58 @@ class SceneUpdateContext {
   bool HasRetainedNode(const LayerRasterCacheKey& key) const {
     return surface_producer_->HasRetainedNode(key);
   }
-  const scenic::EntityNode& GetRetainedNode(const LayerRasterCacheKey& key) {
+  scenic::EntityNode* GetRetainedNode(const LayerRasterCacheKey& key) {
     return surface_producer_->GetRetainedNode(key);
   }
+
+  // The cumulative alpha value based on all the parent OpacityLayers.
+  void set_alphaf(float alpha) { alpha_ = alpha; }
+  float alphaf() { return alpha_; }
+
+  // The global scenic elevation at a given point in the traversal.
+  float scenic_elevation() { return scenic_elevation_; }
+
+  void set_scenic_elevation(float elevation) { scenic_elevation_ = elevation; }
+
+  float GetGlobalElevationForNextScenicLayer() {
+    float elevation = topmost_global_scenic_elevation_;
+    topmost_global_scenic_elevation_ += kScenicZElevationBetweenLayers;
+    return elevation;
+  }
+
+  // |ExternalViewEmbedder|
+  SkCanvas* GetRootCanvas() override { return nullptr; }
+
+  // |ExternalViewEmbedder|
+  void CancelFrame() override {}
+
+  // |ExternalViewEmbedder|
+  void BeginFrame(
+      SkISize frame_size,
+      GrContext* context,
+      double device_pixel_ratio,
+      fml::RefPtr<fml::RasterThreadMerger> raster_thread_merger) override {}
+
+  // |ExternalViewEmbedder|
+  void PrerollCompositeEmbeddedView(
+      int view_id,
+      std::unique_ptr<EmbeddedViewParams> params) override {}
+
+  // |ExternalViewEmbedder|
+  std::vector<SkCanvas*> GetCurrentCanvases() override {
+    return std::vector<SkCanvas*>();
+  }
+
+  // |ExternalViewEmbedder|
+  virtual SkCanvas* CompositeEmbeddedView(int view_id) override {
+    return nullptr;
+  }
+
+  void CreateView(int64_t view_id, bool hit_testable, bool focusable);
+
+  void DestroyView(int64_t view_id);
+
+  void UpdateScene(int64_t view_id, const SkPoint& offset, const SkSize& size);
 
  private:
   struct PaintTask {
@@ -236,6 +295,10 @@ class SceneUpdateContext {
   float frame_physical_depth_ = 0.0f;
   float frame_device_pixel_ratio_ =
       1.0f;  // Ratio between logical and physical pixels.
+
+  float alpha_ = 1.0f;
+  float scenic_elevation_ = 0.f;
+  float topmost_global_scenic_elevation_ = kScenicZElevationBetweenLayers;
 
   std::vector<PaintTask> paint_tasks_;
 

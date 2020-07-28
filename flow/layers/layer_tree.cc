@@ -1,6 +1,7 @@
 // Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+// FLUTTER_NOLINT
 
 #include "flutter/flow/layers/layer_tree.h"
 
@@ -21,8 +22,10 @@ LayerTree::LayerTree(const SkISize& frame_size,
       checkerboard_raster_cache_images_(false),
       checkerboard_offscreen_layers_(false) {}
 
-void LayerTree::RecordBuildTime(fml::TimePoint start) {
-  build_start_ = start;
+void LayerTree::RecordBuildTime(fml::TimePoint build_start,
+                                fml::TimePoint target_time) {
+  build_start_ = build_start;
+  target_time_ = target_time;
   build_finish_ = fml::TimePoint::Now();
 }
 
@@ -59,7 +62,7 @@ bool LayerTree::Preroll(CompositorContext::ScopedFrame& frame,
   return context.surface_needs_readback;
 }
 
-#if defined(OS_FUCHSIA)
+#if defined(LEGACY_FUCHSIA_EMBEDDER)
 void LayerTree::UpdateScene(SceneUpdateContext& context,
                             scenic::ContainerNode& container) {
   TRACE_EVENT0("flutter", "LayerTree::UpdateScene");
@@ -83,7 +86,7 @@ void LayerTree::UpdateScene(SceneUpdateContext& context,
       context,
       SkRRect::MakeRect(
           SkRect::MakeWH(frame_size_.width(), frame_size_.height())),
-      SK_ColorTRANSPARENT, SK_AlphaOPAQUE);
+      SK_ColorTRANSPARENT, SK_AlphaOPAQUE, "flutter::LayerTree");
   if (root_layer_->needs_system_composite()) {
     root_layer_->UpdateScene(context);
   }

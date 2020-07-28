@@ -11,8 +11,8 @@ import static org.mockito.Mockito.when;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterJNI;
@@ -173,6 +173,18 @@ public class FlutterActivityTest {
 
       return new FlutterEngine(
           context, mock(FlutterLoader.class), flutterJNI, new String[] {}, false);
+    }
+  }
+
+  // This is just a compile time check to ensure that it's possible for FlutterActivity subclasses
+  // to provide their own intent builders which builds their own runtime types.
+  static class FlutterActivityWithIntentBuilders extends FlutterActivity {
+    public static NewEngineIntentBuilder withNewEngine() {
+      return new NewEngineIntentBuilder(FlutterActivityWithIntentBuilders.class);
+    }
+
+    public static CachedEngineIntentBuilder withCachedEngine(@NonNull String cachedEngineId) {
+      return new CachedEngineIntentBuilder(FlutterActivityWithIntentBuilders.class, cachedEngineId);
     }
   }
 }

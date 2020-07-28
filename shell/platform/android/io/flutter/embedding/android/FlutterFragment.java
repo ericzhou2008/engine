@@ -5,18 +5,18 @@
 package io.flutter.embedding.android;
 
 import android.app.Activity;
-import android.arch.lifecycle.Lifecycle;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
 import io.flutter.Log;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterShellArgs;
@@ -113,6 +113,11 @@ public class FlutterFragment extends Fragment implements FlutterActivityAndFragm
    * outlive the {@code FlutterFragment}.
    */
   protected static final String ARG_DESTROY_ENGINE_WITH_FRAGMENT = "destroy_engine_with_fragment";
+  /**
+   * True if the framework state in the engine attached to this engine should be stored and restored
+   * when this fragment is created and destroyed.
+   */
+  protected static final String ARG_ENABLE_STATE_RESTORATION = "enable_state_restoration";
 
   /**
    * Creates a {@code FlutterFragment} with a default configuration.
@@ -1016,6 +1021,17 @@ public class FlutterFragment extends Fragment implements FlutterActivityAndFragm
     if (attachedActivity instanceof FlutterUiDisplayListener) {
       ((FlutterUiDisplayListener) attachedActivity).onFlutterUiNoLongerDisplayed();
     }
+  }
+
+  @Override
+  public boolean shouldRestoreAndSaveState() {
+    if (getArguments().containsKey(ARG_ENABLE_STATE_RESTORATION)) {
+      return getArguments().getBoolean(ARG_ENABLE_STATE_RESTORATION);
+    }
+    if (getCachedEngineId() != null) {
+      return false;
+    }
+    return true;
   }
 
   /**

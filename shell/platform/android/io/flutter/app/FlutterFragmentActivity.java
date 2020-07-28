@@ -8,16 +8,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
+import androidx.fragment.app.FragmentActivity;
 import io.flutter.app.FlutterActivityDelegate.ViewFactory;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.view.FlutterNativeView;
 import io.flutter.view.FlutterView;
 
 /**
- * Base class for activities that use Flutter who also require the use of the Android v4 Support
- * library's {@link FragmentActivity}. Applications that don't have this need will likely want to
- * use {@link FlutterActivity} instead.
+ * Deprecated class for activities that use Flutter who also require the use of the Android v4
+ * Support library's {@link FragmentActivity}.
+ *
+ * <p>Deprecation: this class is replaced by {@link
+ * io.flutter.embedding.android.FlutterFragmentActivity}.
+ *
+ * <p>Applications that don't have this need will likely want to use {@link FlutterActivity}
+ * instead.
  *
  * <p><strong>Important!</strong> Flutter does not bundle the necessary Android v4 Support library
  * classes for this class to work at runtime. It is the responsibility of the app developer using
@@ -25,7 +30,7 @@ import io.flutter.view.FlutterView;
  * app to ensure that {@link FragmentActivity} is available at runtime.
  *
  * @see <a target="_new"
- *     href="https://developer.android.com/topic/libraries/support-library/setup.html">https://developer.android.com/topic/libraries/support-library/setup.html</a>
+ *     href="https://developer.android.com/training/testing/set-up-project">https://developer.android.com/training/testing/set-up-project</a>
  */
 public class FlutterFragmentActivity extends FragmentActivity
     implements FlutterView.Provider, PluginRegistry, ViewFactory {
@@ -125,9 +130,10 @@ public class FlutterFragmentActivity extends FragmentActivity
     eventDelegate.onPostResume();
   }
 
-  // @Override - added in API level 23
+  @Override
   public void onRequestPermissionsResult(
       int requestCode, String[] permissions, int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     eventDelegate.onRequestPermissionsResult(requestCode, permissions, grantResults);
   }
 

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 // @dart = 2.6
+@TestOn('chrome || firefox')
+
 import 'package:ui/ui.dart' as ui;
 import 'package:ui/src/engine.dart';
 
@@ -1154,5 +1156,6 @@ EngineLineMetrics line(
     width: width,
     lineNumber: lineNumber,
     left: left,
+    endIndexWithoutNewlines: -1,
   );
 }

@@ -29,12 +29,8 @@ shared_library("flutter_shell_native") {
     "android_environment_gl.h",
     "android_external_texture_gl.cc",
     "android_external_texture_gl.h",
-    "android_native_window.cc",
-    "android_native_window.h",
     "android_shell_holder.cc",
     "android_shell_holder.h",
-    "android_surface.cc",
-    "android_surface.h",
     "android_surface_gl.cc",
     "android_surface_gl.h",
     "android_surface_software.cc",
@@ -48,8 +44,8 @@ shared_library("flutter_shell_native") {
     "platform_message_response_android.h",
     "platform_view_android.cc",
     "platform_view_android.h",
-    "platform_view_android_jni.cc",
-    "platform_view_android_jni.h",
+    "platform_view_android_jni_impl.cc",
+    "platform_view_android_jni_impl.h",
     "vsync_waiter_android.cc",
     "vsync_waiter_android.h",
   ]
@@ -65,6 +61,11 @@ shared_library("flutter_shell_native") {
     "//flutter/runtime",
     "//flutter/runtime:libdart",
     "//flutter/shell/common",
+    "//flutter/shell/platform/android/context",
+    "//flutter/shell/platform/android/external_view_embedder",
+    "//flutter/shell/platform/android/jni",
+    "//flutter/shell/platform/android/surface",
+    "//flutter/shell/platform/android/surface:native_window",
     "//third_party/skia",
   ]
 
@@ -134,10 +135,12 @@ android_java_sources = [
   "io/flutter/embedding/android/FlutterEngineProvider.java",
   "io/flutter/embedding/android/FlutterFragment.java",
   "io/flutter/embedding/android/FlutterFragmentActivity.java",
+  "io/flutter/embedding/android/FlutterImageView.java",
   "io/flutter/embedding/android/FlutterSplashView.java",
   "io/flutter/embedding/android/FlutterSurfaceView.java",
   "io/flutter/embedding/android/FlutterTextureView.java",
   "io/flutter/embedding/android/FlutterView.java",
+  "io/flutter/embedding/android/MotionEventTracker.java",
   "io/flutter/embedding/android/RenderMode.java",
   "io/flutter/embedding/android/SplashScreen.java",
   "io/flutter/embedding/android/SplashScreenProvider.java",
@@ -146,14 +149,15 @@ android_java_sources = [
   "io/flutter/embedding/engine/FlutterEngineCache.java",
   "io/flutter/embedding/engine/FlutterEnginePluginRegistry.java",
   "io/flutter/embedding/engine/FlutterJNI.java",
+  "io/flutter/embedding/engine/FlutterOverlaySurface.java",
+  "io/flutter/embedding/engine/mutatorsstack/FlutterMutatorsStack.java",
+  "io/flutter/embedding/engine/mutatorsstack/FlutterMutatorView.java",
   "io/flutter/embedding/engine/FlutterShellArgs.java",
   "io/flutter/embedding/engine/dart/DartExecutor.java",
   "io/flutter/embedding/engine/dart/DartMessenger.java",
   "io/flutter/embedding/engine/dart/PlatformMessageHandler.java",
   "io/flutter/embedding/engine/loader/FlutterLoader.java",
-  "io/flutter/embedding/engine/loader/ResourceCleaner.java",
   "io/flutter/embedding/engine/loader/ResourceExtractor.java",
-  "io/flutter/embedding/engine/loader/ResourcePaths.java",
   "io/flutter/embedding/engine/plugins/FlutterPlugin.java",
   "io/flutter/embedding/engine/plugins/PluginRegistry.java",
   "io/flutter/embedding/engine/plugins/activity/ActivityAware.java",
@@ -178,9 +182,11 @@ android_java_sources = [
   "io/flutter/embedding/engine/systemchannels/KeyEventChannel.java",
   "io/flutter/embedding/engine/systemchannels/LifecycleChannel.java",
   "io/flutter/embedding/engine/systemchannels/LocalizationChannel.java",
+  "io/flutter/embedding/engine/systemchannels/MouseCursorChannel.java",
   "io/flutter/embedding/engine/systemchannels/NavigationChannel.java",
   "io/flutter/embedding/engine/systemchannels/PlatformChannel.java",
   "io/flutter/embedding/engine/systemchannels/PlatformViewsChannel.java",
+  "io/flutter/embedding/engine/systemchannels/RestorationChannel.java",
   "io/flutter/embedding/engine/systemchannels/SettingsChannel.java",
   "io/flutter/embedding/engine/systemchannels/SystemChannel.java",
   "io/flutter/embedding/engine/systemchannels/TextInputChannel.java",
@@ -202,8 +208,11 @@ android_java_sources = [
   "io/flutter/plugin/common/StandardMessageCodec.java",
   "io/flutter/plugin/common/StandardMethodCodec.java",
   "io/flutter/plugin/common/StringCodec.java",
+  "io/flutter/plugin/editing/FlutterTextUtils.java",
   "io/flutter/plugin/editing/InputConnectionAdaptor.java",
   "io/flutter/plugin/editing/TextInputPlugin.java",
+  "io/flutter/plugin/localization/LocalizationPlugin.java",
+  "io/flutter/plugin/mouse/MouseCursorPlugin.java",
   "io/flutter/plugin/platform/AccessibilityEventsDelegate.java",
   "io/flutter/plugin/platform/PlatformPlugin.java",
   "io/flutter/plugin/platform/PlatformView.java",
@@ -228,15 +237,14 @@ android_java_sources = [
   "io/flutter/view/VsyncWaiter.java",
 ]
 
-android_support_jars = [
-  "//third_party/android_support/android_support_compat.jar",
-  "//third_party/android_support/android_support_annotations.jar",
-  "//third_party/android_support/android_support_fragment.jar",
-  "//third_party/android_support/android_arch_lifecycle_common.jar",
-  "//third_party/android_support/android_arch_lifecycle_common_java8.jar",
-  "//third_party/android_support/android_arch_lifecycle_runtime.jar",
-  "//third_party/android_support/android_arch_lifecycle_viewmodel.jar",
-]
+list_script = rebase_path("//build/ls.py", ".", "//")
+embedding_dependencies_jars =
+    exec_script(list_script,
+                [
+                  "--target-directory",
+                  rebase_path("//third_party/android_embedding_dependencies"),
+                ],
+                "list lines")
 
 action("flutter_shell_java") {
   script = "//build/android/gyp/javac.py"
@@ -256,18 +264,24 @@ action("flutter_shell_java") {
     source_jar_path,
     source_jar_path + ".md5.stamp",
   ]
+
+  lambda_jar = "$android_sdk_build_tools/core-lambda-stubs.jar"
   inputs = [
-    android_sdk_jar,
-  ]
-  inputs += android_support_jars
+             android_sdk_jar,
+             lambda_jar,
+           ] + embedding_dependencies_jars
 
   _rebased_current_path = rebase_path(".")
   _rebased_jar_path = rebase_path(jar_path, root_build_dir)
   _rebased_source_jar_path = rebase_path(source_jar_path, root_build_dir)
   _rebased_depfile = rebase_path(depfile, root_build_dir)
   _rebased_android_sdk_jar = rebase_path(android_sdk_jar, root_build_dir)
-  _rebased_classpath = [ _rebased_android_sdk_jar ] +
-                       rebase_path(android_support_jars, root_build_dir)
+  _rebased_lambda_jar = rebase_path(lambda_jar, root_build_dir)
+  _rebased_classpath =
+      [
+        _rebased_android_sdk_jar,
+        _rebased_lambda_jar,
+      ] + rebase_path(embedding_dependencies_jars, root_build_dir)
 
   args = [
     "--depfile=$_rebased_depfile",
@@ -357,10 +371,10 @@ action("android_jar") {
 }
 
 action("pom_libflutter") {
-  script = "//flutter/tools/android_support/generate_pom_file.py"
+  script = "//flutter/tools/androidx/generate_pom_file.py"
 
   inputs = [
-    "//flutter/tools/android_support/files.json",
+    "//flutter/tools/androidx/files.json",
   ]
 
   artifact_id =
@@ -381,10 +395,10 @@ action("pom_libflutter") {
 }
 
 action("pom_embedding") {
-  script = "//flutter/tools/android_support/generate_pom_file.py"
+  script = "//flutter/tools/androidx/generate_pom_file.py"
 
   inputs = [
-    "//flutter/tools/android_support/files.json",
+    "//flutter/tools/androidx/files.json",
   ]
 
   artifact_id = "flutter_embedding_$flutter_runtime_mode"
@@ -406,7 +420,7 @@ action("pom_embedding") {
 }
 
 # To build and run:
-#   testing/run_tests.py [--type=java] [--filter=io.flutter.TestClassName]
+#   testing/run_tests.py [--type=java] [--java-filter=io.flutter.TestClassName]
 action("robolectric_tests") {
   script = "//build/android/gyp/javac.py"
   depfile = "$target_gen_dir/$target_name.d"
@@ -419,6 +433,7 @@ action("robolectric_tests") {
     "test/io/flutter/embedding/android/FlutterActivityAndFragmentDelegateTest.java",
     "test/io/flutter/embedding/android/FlutterActivityTest.java",
     "test/io/flutter/embedding/android/FlutterAndroidComponentTest.java",
+    "test/io/flutter/embedding/android/FlutterFragmentActivityTest.java",
     "test/io/flutter/embedding/android/FlutterFragmentTest.java",
     "test/io/flutter/embedding/android/FlutterViewTest.java",
     "test/io/flutter/embedding/android/RobolectricFlutterActivity.java",
@@ -432,16 +447,21 @@ action("robolectric_tests") {
     "test/io/flutter/embedding/engine/dart/DartExecutorTest.java",
     "test/io/flutter/embedding/engine/plugins/shim/ShimPluginRegistryTest.java",
     "test/io/flutter/embedding/engine/renderer/FlutterRendererTest.java",
-    "test/io/flutter/embedding/engine/systemchannels/PlatformChannelTest.java",
+    "test/io/flutter/embedding/engine/systemchannels/RestorationChannelTest.java",
     "test/io/flutter/external/FlutterLaunchTests.java",
     "test/io/flutter/plugin/common/StandardMessageCodecTest.java",
+    "test/io/flutter/plugin/common/StandardMethodCodecTest.java",
     "test/io/flutter/plugin/editing/InputConnectionAdaptorTest.java",
     "test/io/flutter/plugin/editing/TextInputPluginTest.java",
+    "test/io/flutter/plugin/localization/LocalizationPluginTest.java",
+    "test/io/flutter/plugin/mouse/MouseCursorPluginTest.java",
     "test/io/flutter/plugin/platform/PlatformPluginTest.java",
+    "test/io/flutter/plugin/platform/PlatformViewsControllerTest.java",
     "test/io/flutter/plugin/platform/SingleViewPresentationTest.java",
     "test/io/flutter/plugins/GeneratedPluginRegistrant.java",
     "test/io/flutter/util/FakeKeyEvent.java",
     "test/io/flutter/util/PreconditionsTest.java",
+    "test/io/flutter/view/AccessibilityBridgeTest.java",
   ]
 
   outputs = [
@@ -450,35 +470,29 @@ action("robolectric_tests") {
     jar_path + ".md5.stamp",
   ]
 
+  additional_jar_files = [ "robolectric.properties" ]
+
   _jar_dependencies = [
-    android_sdk_jar,
-    embedding_jar_path,
-    "//third_party/robolectric/lib/junit-3.8.jar",
-    "//third_party/robolectric/lib/junit-4.13-beta-3.jar",
-    "//third_party/robolectric/lib/robolectric-3.8.jar",
-    "//third_party/robolectric/lib/shadows-framework-3.8.jar",
-    "//third_party/robolectric/lib/annotations-3.8.jar",
-    "//third_party/robolectric/lib/shadowapi-3.8.jar",
-    "//third_party/robolectric/lib/runtime-1.1.1.jar",
-    "//third_party/robolectric/lib/common-1.1.1.jar",
-    "//third_party/robolectric/lib/common-java8-1.1.1.jar",
-    "//third_party/robolectric/lib/support-annotations-28.0.0.jar",
-    "//third_party/robolectric/lib/support-fragment-25.2.0.jar",
-    "//third_party/robolectric/lib/mockito-all-1.10.19.jar",
-  ]
+                        android_sdk_jar,
+                        embedding_jar_path,
+                      ] + embedding_dependencies_jars
 
-  inputs = _jar_dependencies
+  inputs = _jar_dependencies + additional_jar_files
 
+  _rebased_current_path = rebase_path(".")
   _rebased_jar_path = rebase_path(jar_path, root_build_dir)
   _rebased_depfile = rebase_path(depfile, root_build_dir)
   _rebased_classpath = rebase_path(_jar_dependencies, root_build_dir)
   _rebased_srcjars = rebase_path(_jar_dependencies, root_build_dir)
+  _rebased_additional_files = rebase_path(additional_jar_files, root_build_dir)
 
   args = [
     "--depfile=$_rebased_depfile",
     "--jar-path=$_rebased_jar_path",
     "--classpath=$_rebased_classpath",
+    "--jar-source-base-dir=$_rebased_current_path",
     "--java-srcjars=$_rebased_srcjars",
+    "--additional-jar-files=$_rebased_additional_files",
   ]
 
   args += rebase_path(sources, root_build_dir)
@@ -532,7 +546,7 @@ zip_bundle("android") {
 # https://github.com/flutter/flutter/issues/42400
 action("gen_android_javadoc") {
   script = "//flutter/tools/gen_javadoc.py"
-  sources = android_java_sources + android_support_jars
+  sources = android_java_sources + embedding_dependencies_jars
 
   outputs = [
     "$target_gen_dir/javadocs",

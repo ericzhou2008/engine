@@ -5,7 +5,7 @@
 package io.flutter.embedding.engine.systemchannels;
 
 import android.os.Build;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import io.flutter.Log;
 import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.plugin.common.JSONMethodCodec;
@@ -28,6 +28,7 @@ public class LocalizationChannel {
   /** Send the given {@code locales} to Dart. */
   public void sendLocales(@NonNull List<Locale> locales) {
     Log.v(TAG, "Sending Locales to Flutter.");
+    // Send the user's preferred locales.
     List<String> data = new ArrayList<>();
     for (Locale locale : locales) {
       Log.v(

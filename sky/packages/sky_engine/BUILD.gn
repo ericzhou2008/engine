@@ -182,6 +182,16 @@ copy("copy_dart_ui") {
   ]
 }
 
+copy("copy_allowed_experiments") {
+  sources = [
+    "//third_party/dart/sdk/lib/_internal/allowed_experiments.json",
+  ]
+
+  outputs = [
+    "$root_gen_dir/dart-pkg/sky_engine/lib/_internal/allowed_experiments.json",
+  ]
+}
+
 group("copy_dart_sdk") {
   deps = [
     ":_http",
@@ -189,6 +199,7 @@ group("copy_dart_sdk") {
     ":async",
     ":collection",
     ":convert",
+    ":copy_allowed_experiments",
     ":core",
     ":developer",
     ":ffi",
@@ -228,24 +239,4 @@ dart_pkg("sky_engine") {
     "$service_isolate_dir/vmservice_io.dart",
     "$service_isolate_dir/vmservice_server.dart",
   ]
-}
-
-if (is_fuchsia && !using_fuchsia_sdk) {
-  import("//build/dart/dart_library.gni")
-
-  dart_library("sky_engine_dart") {
-    package_name = "sky_engine"
-
-    package_root = "$root_gen_dir/dart-pkg/sky_engine"
-
-    sources = []
-
-    disable_analysis = true
-
-    non_dart_deps = [
-      # This will ensure all the source files needed for this package are
-      # copied to the right location.
-      ":sky_engine",
-    ]
-  }
 }

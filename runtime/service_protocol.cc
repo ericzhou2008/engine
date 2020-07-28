@@ -1,6 +1,7 @@
 // Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+// FLUTTER_NOLINT
 
 #define RAPIDJSON_HAS_STDSTRING 1
 
@@ -33,6 +34,8 @@ const std::string_view ServiceProtocol::kSetAssetBundlePathExtensionName =
     "_flutter.setAssetBundlePath";
 const std::string_view ServiceProtocol::kGetDisplayRefreshRateExtensionName =
     "_flutter.getDisplayRefreshRate";
+const std::string_view ServiceProtocol::kGetSkSLsExtensionName =
+    "_flutter.getSkSLs";
 
 static constexpr std::string_view kViewIdPrefx = "_flutterView/";
 static constexpr std::string_view kListViewsExtensionName =
@@ -50,6 +53,7 @@ ServiceProtocol::ServiceProtocol()
           kFlushUIThreadTasksExtensionName,
           kSetAssetBundlePathExtensionName,
           kGetDisplayRefreshRateExtensionName,
+          kGetSkSLsExtensionName,
       }),
       handlers_mutex_(fml::SharedMutex::Create()) {}
 
@@ -146,8 +150,7 @@ bool ServiceProtocol::HandleMessage(std::string_view method,
   return service_protocol->HandleMessage(method, params, response);
 }
 
-FML_WARN_UNUSED_RESULT
-static bool HandleMessageOnHandler(
+[[nodiscard]] static bool HandleMessageOnHandler(
     ServiceProtocol::Handler* handler,
     std::string_view method,
     const ServiceProtocol::Handler::ServiceProtocolMap& params,
